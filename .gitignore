@@ -1,4 +1,6 @@
 .ipynb_checkpoints
 **/*.sw[klmnop]
 **/*.gz
+output/
+output/**
 

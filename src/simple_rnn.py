@@ -111,7 +111,18 @@ def predict_sin():
                 mse = loss.eval(session=sess, 
                         feed_dict={x: X_batch, y: y_batch})
                 print("Epoch %d, mse: %f" % (epoch, mse))
-
+                yhat = []
+                for i in range(N // n_steps):
+                    idx_bgn = i * (N // n_steps)
+                    idx_end = idx_bgn + n_steps
+                    X_batch = t[idx_bgn:idx_end].reshape(\
+                            (-1, n_steps, n_inputs))
+                    yhat.append( outputs.eval(session=sess, 
+                        feed_dict={x: X_batch}) )
+                yhat = np.reshape(np.array(yhat), (-1,1))
+                with open("./output/epoch_%05d.txt" % (epoch), "w") as fp:
+                    for i in range(N):
+                        fp.write("%f,%f,%f\n" % (t[i], f_t[i], yhat[i]))
 
 
 def main(args):

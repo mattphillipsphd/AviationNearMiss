@@ -84,8 +84,25 @@ def predict_sin():
 
     n_epochs = 10000
     batch_size = 50
+    resolution = 0.1
 
-    def _get_batch(iteration):
+    def _get_batch(t0=-1):
+        t_min, t_max = 0, 30
+
+        def time_series(t):
+            return t * np.sin(t) / 3 + 2 * np.sin(t*5)
+
+        if t0<0:
+            t0 = np.random.rand(batch_size, 1) \
+                    * (t_max - t_min - n_steps * resolution)
+        else:
+            t0 = np.array([[t0]])
+        Ts = t0 + np.arange(0., n_steps + 1) * resolution
+        ys = time_series(Ts)
+        return ys[:, :-1].reshape(-1, n_steps, 1), \
+                ys[:, 1:].reshape(-1, n_steps, 1)
+
+    def _get_batch_old(iteration):
         X_batch = []
         y_batch = []
         for i in range(batch_size):
@@ -105,24 +122,21 @@ def predict_sin():
         init.run()
         for epoch in range(n_epochs):
             for iteration in range(N // batch_size):
-                X_batch,y_batch = _get_batch(iteration) 
+                X_batch,y_batch = _get_batch() 
                 sess.run(training_op, feed_dict={x: X_batch, y: y_batch})
             if epoch % 100 == 0:
                 mse = loss.eval(session=sess, 
                         feed_dict={x: X_batch, y: y_batch})
                 print("Epoch %d, mse: %f" % (epoch, mse))
-                yhat = []
-                for i in range(N // n_steps):
-                    idx_bgn = i * (N // n_steps)
-                    idx_end = idx_bgn + n_steps
-                    X_batch = t[idx_bgn:idx_end].reshape(\
-                            (-1, n_steps, n_inputs))
-                    yhat.append( outputs.eval(session=sess, 
-                        feed_dict={x: X_batch}) )
+                yhat = [0 for i in range(n_steps)]
+                for i in range(N-n_steps):
+                    X_batch,y_batch = _get_batch(i*resolution) 
+                    out = outputs.eval(session=sess, feed_dict={x: X_batch}) 
+                    yhat.append( np.squeeze(out)[-1] )
                 yhat = np.reshape(np.array(yhat), (-1,1))
                 with open("./output/epoch_%05d.txt" % (epoch), "w") as fp:
                     for i in range(N):
-                        fp.write("%f,%f,%f\n" % (t[i], f_t[i], yhat[i]))
+                        fp.write("%f\t%f\t%f\n" % (t[i], f_t[i], yhat[i]))
 
 
 def main(args):
